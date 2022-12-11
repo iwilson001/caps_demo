@@ -13,15 +13,20 @@ from pprint import pprint
 import pandas as pd
 import matplotlib.pyplot as plt
 
+
+# 'link_flair_text': ':DDNerd: DD :DD:',
+
 # regex for ticker symbols, will be used when searching subreddit titles
 regex_for_ticker = "\$[A-Z]{3}[A-Z]?[A-Z]?"
 
 # openai key, delete before pushes
 openai.api_key = ""
 
-#start and end date for searches
+# start and end date for searches
 start_epoch = int(dt.datetime(2022, 11, 27).timestamp())
 end_epoch = int(dt.datetime(2022, 12, 9).timestamp())
+start_date = date(2022, 11, 27)
+end_date = date(2022, 12, 9)
 
 # reddit connection and connection to Pushshift api
 reddit_read_only = praw.Reddit(client_id="jIecQpWnOYUzYOgTmdEsTg",  # your client id
@@ -35,34 +40,51 @@ myList = api.search_submissions(after=start_epoch,
                                 subreddit='pennystocks',
                                 filter=['url', 'author', 'title', 'subreddit'],
                                 limit=10,
-                                #score='>10',
+                                # score='>10',
                                 title='$SOBR')
 
-for submission in myList:
-    print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(submission.score) + " Url: " + submission.url)
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=f"Classify the sentiment in this: {submission.title}",
-        temperature=0,
-        max_tokens=60,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
-    print("Sentiment of the title is: " + response["choices"][0]["text"])
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=f"Classify the sentiment in this: {submission.selftext}",
-        temperature=0,
-        max_tokens=60,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
-    print("Sentiment of the body is: " + response["choices"][0]["text"])
+# will show all variables in the objects returned from myList
+# for x in myList:
+#     pprint(vars(x))
 
-sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
-display(sobr_daily.columns[0:2])
+# for submission in myList:
+#     print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(
+#         submission.score) + " Url: " + submission.url)
+#     response = openai.Completion.create(
+#         model="text-davinci-003",
+#         prompt=f"Classify the sentiment in this: {submission.title}",
+#         temperature=0,
+#         max_tokens=60,
+#         top_p=1,
+#         frequency_penalty=0,
+#         presence_penalty=0
+#     )
+#     print("Sentiment of the title is: " + response["choices"][0]["text"])
+#     response = openai.Completion.create(
+#         model="text-davinci-003",
+#         prompt=f"Classify the sentiment in this: {submission.selftext}",
+#         temperature=0,
+#         max_tokens=60,
+#         top_p=1,
+#         frequency_penalty=0,
+#         presence_penalty=0
+#     )
+#     print("Sentiment of the body is: " + response["choices"][0]["text"])
+
+
+def daterange(start_date, end_date):
+    for n in range(int((end_date - start_date).days)):
+        yield start_date + timedelta(n)
+
+
+for single_date in daterange(start_date, end_date):
+    # print(single_date.strftime("%Y-%m-%d"))
+    one_day_later = single_date + dt.timedelta(days=1)
+    print(single_date.strftime("%Y-%m-%d") + " one dat later: " + one_day_later.strftime("%Y-%m-%d"))
+
+
+# sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
+# display(sobr_daily.columns[0:2])
 
 # sobr_daily.plot()
 
@@ -71,37 +93,9 @@ display(sobr_daily.columns[0:2])
 
 
 
-
-
-# for x in myList:
-#     pprint(vars(x))
-
     # f = open("wasd.txt", "a")
     # f.write(x)
     # f.close()
-
-for submission in myList:
-    print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(submission.score) + " Url: " + submission.url)
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=f"Classify the sentiment in this: {submission.title}",
-        temperature=0,
-        max_tokens=60,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
-    print("Sentiment of the title is: " + response["choices"][0]["text"])
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=f"Classify the sentiment in this: {submission.selftext}",
-        temperature=0,
-        max_tokens=60,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
-    print("Sentiment of the body is: " + response["choices"][0]["text"])
 
 # display(myList[0])
 
@@ -134,45 +128,34 @@ for submission in myList:
 # # Display the description of the Subreddit
 # print("Description:", subreddit.description)
 
-posts = subreddit.top("month")
+# posts = subreddit.top("month")
 # Scraping the top posts of the current month
 
-posts_dict = {"Title": [], "Post Text": [],
-              "ID": [], "Score": [],
-              "Total Comments": [], "Post URL": []
-              }
-
-for post in posts:
-    # Title of each post
-    posts_dict["Title"].append(post.title)
-
-    # Text inside a post
-    posts_dict["Post Text"].append(post.selftext)
-
-    # Unique ID of each post
-    posts_dict["ID"].append(post.id)
-
-    # The score of a post
-    posts_dict["Score"].append(post.score)
-
-    # Total number of comments inside the post
-    posts_dict["Total Comments"].append(post.num_comments)
-
-    # URL of each post
-    posts_dict["Post URL"].append(post.url)
+# posts_dict = {"Title": [], "Post Text": [],
+#               "ID": [], "Score": [],
+#               "Total Comments": [], "Post URL": []
+#               }
+#
+# for post in posts:
+#     # Title of each post
+#     posts_dict["Title"].append(post.title)
+#
+#     # Text inside a post
+#     posts_dict["Post Text"].append(post.selftext)
+#
+#     # Unique ID of each post
+#     posts_dict["ID"].append(post.id)
+#
+#     # The score of a post
+#     posts_dict["Score"].append(post.score)
+#
+#     # Total number of comments inside the post
+#     posts_dict["Total Comments"].append(post.num_comments)
+#
+#     # URL of each post
+#     posts_dict["Post URL"].append(post.url)
 
 # top_posts = pd.DataFrame(posts_dict)
 # print(tabulate(top_posts))
 
 # display(top_posts)
-
-
-# def daterange(start_date, end_date):
-#     for n in range(int((end_date - start_date).days)):
-#         yield start_date + timedelta(n)
-#
-#
-# start_date = date(2021, 12, 11)
-# end_date = date(2022, 12, 11)
-# for single_date in daterange(start_date, end_date):
-#     print(single_date.strftime("%Y-%m-%d"))
