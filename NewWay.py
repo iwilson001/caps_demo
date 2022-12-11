@@ -6,6 +6,11 @@ import datetime as dt
 import requests
 from psaw import PushshiftAPI
 import json
+import os
+import openai
+
+openai.api_key = "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"
+
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,14 +27,28 @@ reddit_read_only = praw.Reddit(client_id="jIecQpWnOYUzYOgTmdEsTg",  # your clien
                                user_agent="MyBot/0.0.1")  # your user agent
 api = PushshiftAPI(reddit_read_only)
 
-start_epoch = int(dt.datetime(2017, 1, 1).timestamp())
+start_epoch = int(dt.datetime(2022, 11, 27).timestamp())
+end_epoch = int(dt.datetime(2022, 12, 9).timestamp())
 
 myList = api.search_submissions(after=start_epoch,
-                            subreddit='pennystocks',
-                            filter=['url', 'author', 'title', 'subreddit'],
-                            limit=10, score='>10')
+                                before=end_epoch,
+                                subreddit='pennystocks',
+                                filter=['url', 'author', 'title', 'subreddit'],
+                                limit=10,
+                                #score='>10',
+                                title='$SOBR')
 for submission in myList:
-    print(submission.title + " " + str(submission.score))
+    print(submission.title + " " + str(submission.score) + " " + submission.url)
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=f"Classify the sentiment in this: {submission.title}",
+        temperature=0,
+        max_tokens=60,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+    print(response["choices"][0]["text"])
 
 # display(myList[0])
 
@@ -43,8 +62,8 @@ json_response = request.json()
 json_object = json.dumps(json_response, indent=4)
 
 # Writing to sample.json
-with open("sample.json", "w") as outfile:
-    outfile.write(json_object)
+# with open("sample.json", "w") as outfile:
+#     outfile.write(json_object)
 
 # f = open("demofile2.txt", "a")
 # f.write(json_response)
@@ -93,9 +112,6 @@ for post in posts:
 # print(tabulate(top_posts))
 
 # display(top_posts)
-
-
-
 
 
 # def daterange(start_date, end_date):
