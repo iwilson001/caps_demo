@@ -13,14 +13,16 @@ from pprint import pprint
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
 # 'link_flair_text': ':DDNerd: DD :DD:',
 
 # regex for ticker symbols, will be used when searching subreddit titles
 regex_for_ticker = "\$[A-Z]{3}[A-Z]?[A-Z]?"
 
 # openai key, delete before pushes
-openai.api_key = ""
+openai.api_key = "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"
+
+# list of tickers and if they have supporting posts
+stock_list = []
 
 # start and end date for searches
 start_epoch = int(dt.datetime(2022, 11, 27).timestamp())
@@ -35,16 +37,16 @@ reddit_read_only = praw.Reddit(client_id="jIecQpWnOYUzYOgTmdEsTg",  # your clien
 api = PushshiftAPI(reddit_read_only)
 
 # generates submission objects where we can get data from (ex. submission.title)
-myList = api.search_submissions(after=start_epoch,
-                                before=end_epoch,
-                                subreddit='pennystocks',
-                                filter=['url', 'author', 'title', 'subreddit'],
-                                limit=10,
-                                # score='>10',
-                                title='$SOBR')
+myListExample = api.search_submissions(after=start_epoch,
+                                       before=end_epoch,
+                                       subreddit='pennystocks',
+                                       filter=['url', 'author', 'title', 'subreddit'],
+                                       limit=10,
+                                       # score='>10',
+                                       title='$SOBR')
 
 # will show all variables in the objects returned from myList
-# for x in myList:
+# for x in myListExample:
 #     pprint(vars(x))
 
 # for submission in myList:
@@ -71,6 +73,7 @@ myList = api.search_submissions(after=start_epoch,
 #     )
 #     print("Sentiment of the body is: " + response["choices"][0]["text"])
 
+print(dt.time(23,59))
 
 def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days)):
@@ -80,9 +83,49 @@ def daterange(start_date, end_date):
 for single_date in daterange(start_date, end_date):
     # print(single_date.strftime("%Y-%m-%d"))
     one_day_later = single_date + dt.timedelta(days=1)
-    print(single_date.strftime("%Y-%m-%d") + " one dat later: " + one_day_later.strftime("%Y-%m-%d"))
+    temp_start_epoch = int((dt.datetime.combine(single_date, dt.datetime.min.time())).timestamp())
+    temp_end_epoch = int((dt.datetime.combine(one_day_later, dt.datetime.min.time())).timestamp())
+    print(single_date.strftime("%Y-%m-%d, %H:%M:%S") + " one day later: " + one_day_later.strftime("%Y-%m-%d, %H:%M:%S"))
+    myList = api.search_submissions(after=temp_start_epoch,
+                                    before=temp_end_epoch,
+                                    subreddit='pennystocks',
+                                    filter=['url', 'author', 'title', 'subreddit'],
+                                    limit=10,
+                                    # score='>10',
+                                    title='$SOBR')
+    for submission in myList:
+        temp_ticker = re.findall(regex_for_ticker, submission.title)
+        if submission.score >= 5:
+            # stock_list.append({"Ticker": temp_ticker})
+            print("SUBMISSION FOUND")
+            print(temp_ticker)
+            print("Score: " + str(submission.score))
 
 
+        # print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(
+        #     submission.score) + " Url: " + submission.url)
+        # response = openai.Completion.create(
+        #     model="text-davinci-003",
+        #     prompt=f"Classify the sentiment in this: {submission.title}",
+        #     temperature=0,
+        #     max_tokens=60,
+        #     top_p=1,
+        #     frequency_penalty=0,
+        #     presence_penalty=0
+        # )
+        # print("Sentiment of the title is: " + response["choices"][0]["text"])
+        # response = openai.Completion.create(
+        #     model="text-davinci-003",
+        #     prompt=f"Classify the sentiment in this: {submission.selftext}",
+        #     temperature=0,
+        #     max_tokens=60,
+        #     top_p=1,
+        #     frequency_penalty=0,
+        #     presence_penalty=0
+        # )
+        # print("Sentiment of the body is: " + response["choices"][0]["text"])
+for i in stock_list:
+    print(str(i))
 # sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
 # display(sobr_daily.columns[0:2])
 
@@ -91,11 +134,9 @@ for single_date in daterange(start_date, end_date):
 # plt.show()
 
 
-
-
-    # f = open("wasd.txt", "a")
-    # f.write(x)
-    # f.close()
+# f = open("wasd.txt", "a")
+# f.write(x)
+# f.close()
 
 # display(myList[0])
 
