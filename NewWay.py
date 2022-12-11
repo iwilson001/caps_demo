@@ -8,28 +8,28 @@ from psaw import PushshiftAPI
 import json
 import os
 import openai
-
-openai.api_key = "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"
-
-
+import re
+from pprint import pprint
 import pandas as pd
 import matplotlib.pyplot as plt
 
-sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
-display(sobr_daily.columns[0:2])
+# regex for ticker symbols, will be used when searching subreddit titles
+regex_for_ticker = "\$[A-Z]{3}[A-Z]?[A-Z]?"
 
-# sobr_daily.plot()
+# openai key, delete before pushes
+openai.api_key = ""
 
-# plt.show()
+#start and end date for searches
+start_epoch = int(dt.datetime(2022, 11, 27).timestamp())
+end_epoch = int(dt.datetime(2022, 12, 9).timestamp())
 
+# reddit connection and connection to Pushshift api
 reddit_read_only = praw.Reddit(client_id="jIecQpWnOYUzYOgTmdEsTg",  # your client id
                                client_secret="MF8q2iDGYcsoKY3mta49Lu5frWa5MQ",  # your client secret
                                user_agent="MyBot/0.0.1")  # your user agent
 api = PushshiftAPI(reddit_read_only)
 
-start_epoch = int(dt.datetime(2022, 11, 27).timestamp())
-end_epoch = int(dt.datetime(2022, 12, 9).timestamp())
-
+# generates submission objects where we can get data from (ex. submission.title)
 myList = api.search_submissions(after=start_epoch,
                                 before=end_epoch,
                                 subreddit='pennystocks',
@@ -37,8 +37,9 @@ myList = api.search_submissions(after=start_epoch,
                                 limit=10,
                                 #score='>10',
                                 title='$SOBR')
+
 for submission in myList:
-    print(submission.title + " " + str(submission.score) + " " + submission.url)
+    print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(submission.score) + " Url: " + submission.url)
     response = openai.Completion.create(
         model="text-davinci-003",
         prompt=f"Classify the sentiment in this: {submission.title}",
@@ -48,18 +49,70 @@ for submission in myList:
         frequency_penalty=0,
         presence_penalty=0
     )
-    print(response["choices"][0]["text"])
+    print("Sentiment of the title is: " + response["choices"][0]["text"])
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=f"Classify the sentiment in this: {submission.selftext}",
+        temperature=0,
+        max_tokens=60,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+    print("Sentiment of the body is: " + response["choices"][0]["text"])
+
+sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
+display(sobr_daily.columns[0:2])
+
+# sobr_daily.plot()
+
+# plt.show()
+
+
+
+
+
+
+# for x in myList:
+#     pprint(vars(x))
+
+    # f = open("wasd.txt", "a")
+    # f.write(x)
+    # f.close()
+
+for submission in myList:
+    print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(submission.score) + " Url: " + submission.url)
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=f"Classify the sentiment in this: {submission.title}",
+        temperature=0,
+        max_tokens=60,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+    print("Sentiment of the title is: " + response["choices"][0]["text"])
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=f"Classify the sentiment in this: {submission.selftext}",
+        temperature=0,
+        max_tokens=60,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+    print("Sentiment of the body is: " + response["choices"][0]["text"])
 
 # display(myList[0])
 
-query = "pennystocks"  # Define Your Query
-query2 = ">10"
-url = f"https://api.pushshift.io/reddit/search/submission/?subreddit={query}&?score={query2}"
-request = requests.get(url)
-json_response = request.json()
+# query = "pennystocks"  # Define Your Query
+# query2 = ">10"
+# url = f"https://api.pushshift.io/reddit/search/submission/?subreddit={query}&?score={query2}"
+# request = requests.get(url)
+# json_response = request.json()
 
 # Serializing json
-json_object = json.dumps(json_response, indent=4)
+# json_object = json.dumps(json_response, indent=4)
 
 # Writing to sample.json
 # with open("sample.json", "w") as outfile:
@@ -68,18 +121,18 @@ json_object = json.dumps(json_response, indent=4)
 # f = open("demofile2.txt", "a")
 # f.write(json_response)
 # f.close()
-display(json_response['data'])
+# display(json_response['data'])
 
-subreddit = reddit_read_only.subreddit("pennystocks")
+# subreddit = reddit_read_only.subreddit("pennystocks")
 
 # Display the name of the Subreddit
-print("Display Name:", subreddit.display_name)
-
-# Display the title of the Subreddit
-print("Title:", subreddit.title)
-
-# Display the description of the Subreddit
-print("Description:", subreddit.description)
+# print("Display Name:", subreddit.display_name)
+#
+# # Display the title of the Subreddit
+# print("Title:", subreddit.title)
+#
+# # Display the description of the Subreddit
+# print("Description:", subreddit.description)
 
 posts = subreddit.top("month")
 # Scraping the top posts of the current month
