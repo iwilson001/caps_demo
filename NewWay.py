@@ -19,10 +19,16 @@ import matplotlib.pyplot as plt
 regex_for_ticker = "\$[A-Z]{3}[A-Z]?[A-Z]?"
 
 # openai key, delete before pushes
-openai.api_key = "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"
+openai.api_key = "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"
 
 # list of tickers and if they have supporting posts
-stock_list = []
+# stock_list = []
+
+ticker_list = []
+
+has_multiple_posts = []
+
+time_to_sell_list = []
 
 # start and end date for searches
 start_epoch = int(dt.datetime(2022, 11, 27).timestamp())
@@ -36,48 +42,27 @@ reddit_read_only = praw.Reddit(client_id="jIecQpWnOYUzYOgTmdEsTg",  # your clien
                                user_agent="MyBot/0.0.1")  # your user agent
 api = PushshiftAPI(reddit_read_only)
 
-# generates submission objects where we can get data from (ex. submission.title)
-myListExample = api.search_submissions(after=start_epoch,
-                                       before=end_epoch,
-                                       subreddit='pennystocks',
-                                       filter=['url', 'author', 'title', 'subreddit'],
-                                       limit=10,
-                                       # score='>10',
-                                       title='$SOBR')
+sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
+sobr_daily2 = get_data("sobr", start_date="12/01/2022", end_date="12/02/2022", index_as_date=True, interval="1d")
 
+money = 10000.0
+standard_num_shares = 100
+
+# generates submission objects where we can get data from (ex. submission.title)
+# myListExample = api.search_submissions(after=start_epoch,
+#                                        before=end_epoch,
+#                                        subreddit='pennystocks',
+#                                        filter=['url', 'author', 'title', 'subreddit'],
+#                                        limit=10,
+#                                        # score='>10',
+#                                        title='$SOBR')
 # will show all variables in the objects returned from myList
 # for x in myListExample:
 #     pprint(vars(x))
 
-# for submission in myList:
-#     print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(
-#         submission.score) + " Url: " + submission.url)
-#     response = openai.Completion.create(
-#         model="text-davinci-003",
-#         prompt=f"Classify the sentiment in this: {submission.title}",
-#         temperature=0,
-#         max_tokens=60,
-#         top_p=1,
-#         frequency_penalty=0,
-#         presence_penalty=0
-#     )
-#     print("Sentiment of the title is: " + response["choices"][0]["text"])
-#     response = openai.Completion.create(
-#         model="text-davinci-003",
-#         prompt=f"Classify the sentiment in this: {submission.selftext}",
-#         temperature=0,
-#         max_tokens=60,
-#         top_p=1,
-#         frequency_penalty=0,
-#         presence_penalty=0
-#     )
-#     print("Sentiment of the body is: " + response["choices"][0]["text"])
-
-print(dt.time(23,59))
-
-def daterange(start_date, end_date):
-    for n in range(int((end_date - start_date).days)):
-        yield start_date + timedelta(n)
+def daterange(s_d, e_d):
+    for n in range(int((e_d - s_d).days)):
+        yield s_d + timedelta(n)
 
 
 for single_date in daterange(start_date, end_date):
@@ -85,7 +70,8 @@ for single_date in daterange(start_date, end_date):
     one_day_later = single_date + dt.timedelta(days=1)
     temp_start_epoch = int((dt.datetime.combine(single_date, dt.datetime.min.time())).timestamp())
     temp_end_epoch = int((dt.datetime.combine(one_day_later, dt.datetime.min.time())).timestamp())
-    print(single_date.strftime("%Y-%m-%d, %H:%M:%S") + " one day later: " + one_day_later.strftime("%Y-%m-%d, %H:%M:%S"))
+    print(
+        single_date.strftime("%Y-%m-%d, %H:%M:%S") + " one day later: " + one_day_later.strftime("%Y-%m-%d, %H:%M:%S"))
     myList = api.search_submissions(after=temp_start_epoch,
                                     before=temp_end_epoch,
                                     subreddit='pennystocks',
@@ -93,41 +79,59 @@ for single_date in daterange(start_date, end_date):
                                     limit=10,
                                     # score='>10',
                                     title='$SOBR')
+
     for submission in myList:
-        temp_ticker = re.findall(regex_for_ticker, submission.title)
-        if submission.score >= 5:
-            # stock_list.append({"Ticker": temp_ticker})
-            print("SUBMISSION FOUND")
-            print(temp_ticker)
-            print("Score: " + str(submission.score))
+        temp_ticker = re.findall(regex_for_ticker, submission.title)[0]
+        print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(
+            submission.score) + " Url: " + submission.url)
+        responseTitle = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=f"Classify the sentiment in this: {submission.title}",
+            temperature=0,
+            max_tokens=60,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+        print("Sentiment of the title is: " + responseTitle["choices"][0]["text"].replace("\n", ""))
+        responseBody = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=f"Classify the sentiment in this: {submission.selftext}",
+            temperature=0,
+            max_tokens=60,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+        print("Sentiment of the body is: " + responseBody["choices"][0]["text"].replace("\n", ""))
+        if submission.link_flair_text == ":DDNerd: DD :DD:":
+            if temp_ticker not in ticker_list:
+                if submission.score >= 5 and responseTitle["choices"][0]["text"].replace("\n", "") == "Positive" or \
+                        responseBody["choices"][0]["text"].replace("\n", "") == "Positive":
+                    ticker_list.append(temp_ticker)
+                    has_multiple_posts.append(False)
+                    time_to_sell_list.append(-1)
+                    print("SUBMISSION FOUND")
+                    print(temp_ticker)
+                    print("Score: " + str(submission.score))
+            else:
+                if has_multiple_posts[ticker_list.index(temp_ticker)] is False and responseTitle["choices"][0][
+                    "text"].replace("\n", "") == "Positive" or responseBody["choices"][0]["text"].replace("\n",
+                                                                                                          "") == "Positive":
+                    has_multiple_posts[ticker_list.index(temp_ticker)] = True
+                    print("The stock: " + temp_ticker + " has been backed : " + str(
+                        has_multiple_posts[ticker_list.index(temp_ticker)]))
+                    # buy the stock
+                    money -= standard_num_shares * sobr_daily2.open[0]
+                    print("money : " + money)
 
 
-        # print("Title: " + submission.title + " Body: " + submission.selftext + " Score: " + str(
-        #     submission.score) + " Url: " + submission.url)
-        # response = openai.Completion.create(
-        #     model="text-davinci-003",
-        #     prompt=f"Classify the sentiment in this: {submission.title}",
-        #     temperature=0,
-        #     max_tokens=60,
-        #     top_p=1,
-        #     frequency_penalty=0,
-        #     presence_penalty=0
-        # )
-        # print("Sentiment of the title is: " + response["choices"][0]["text"])
-        # response = openai.Completion.create(
-        #     model="text-davinci-003",
-        #     prompt=f"Classify the sentiment in this: {submission.selftext}",
-        #     temperature=0,
-        #     max_tokens=60,
-        #     top_p=1,
-        #     frequency_penalty=0,
-        #     presence_penalty=0
-        # )
-        # print("Sentiment of the body is: " + response["choices"][0]["text"])
-for i in stock_list:
+for i in ticker_list:
     print(str(i))
+
 # sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
-# display(sobr_daily.columns[0:2])
+# pprint(vars(sobr_daily))
+display(sobr_daily2)
 
 # sobr_daily.plot()
 
