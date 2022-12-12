@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 regex_for_ticker = "\$[A-Z]{3}[A-Z]?[A-Z]?"
 
 # openai key, delete before pushes
-openai.api_key = "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"
+openai.api_key = "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"
 
 # list of tickers and if they have supporting posts
 # stock_list = []
@@ -44,6 +44,7 @@ api = PushshiftAPI(reddit_read_only)
 
 sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
 sobr_daily2 = get_data("sobr", start_date="12/01/2022", end_date="12/02/2022", index_as_date=True, interval="1d")
+sobr_daily3 = get_data("sobr", start_date="12/06/2022", end_date="12/07/2022", index_as_date=True, interval="1d")
 
 money = 10000.0
 standard_num_shares = 100
@@ -70,6 +71,12 @@ for single_date in daterange(start_date, end_date):
     one_day_later = single_date + dt.timedelta(days=1)
     temp_start_epoch = int((dt.datetime.combine(single_date, dt.datetime.min.time())).timestamp())
     temp_end_epoch = int((dt.datetime.combine(one_day_later, dt.datetime.min.time())).timestamp())
+    for num_days_left in time_to_sell_list:
+        num_days_left -= 1
+        print("NUMBER DAYS LEFT: " + str(num_days_left))
+        if num_days_left == 0:
+            money += 100 * sobr_daily3.open[0]
+
     print(
         single_date.strftime("%Y-%m-%d, %H:%M:%S") + " one day later: " + one_day_later.strftime("%Y-%m-%d, %H:%M:%S"))
     myList = api.search_submissions(after=temp_start_epoch,
@@ -106,8 +113,8 @@ for single_date in daterange(start_date, end_date):
         print("Sentiment of the body is: " + responseBody["choices"][0]["text"].replace("\n", ""))
         if submission.link_flair_text == ":DDNerd: DD :DD:":
             if temp_ticker not in ticker_list:
-                if submission.score >= 5 and responseTitle["choices"][0]["text"].replace("\n", "") == "Positive" or \
-                        responseBody["choices"][0]["text"].replace("\n", "") == "Positive":
+                if submission.score >= 5 and (responseTitle["choices"][0]["text"].replace("\n", "") == "Positive" or \
+                        responseBody["choices"][0]["text"].replace("\n", "") == "Positive"):
                     ticker_list.append(temp_ticker)
                     has_multiple_posts.append(False)
                     time_to_sell_list.append(-1)
@@ -115,15 +122,16 @@ for single_date in daterange(start_date, end_date):
                     print(temp_ticker)
                     print("Score: " + str(submission.score))
             else:
-                if has_multiple_posts[ticker_list.index(temp_ticker)] is False and responseTitle["choices"][0][
+                if has_multiple_posts[ticker_list.index(temp_ticker)] is False and (responseTitle["choices"][0][
                     "text"].replace("\n", "") == "Positive" or responseBody["choices"][0]["text"].replace("\n",
-                                                                                                          "") == "Positive":
+                                                                                                          "") == "Positive"):
                     has_multiple_posts[ticker_list.index(temp_ticker)] = True
                     print("The stock: " + temp_ticker + " has been backed : " + str(
                         has_multiple_posts[ticker_list.index(temp_ticker)]))
                     # buy the stock
                     money -= standard_num_shares * sobr_daily2.open[0]
-                    print("money : " + money)
+                    print("money : " + str(money))
+                    time_to_sell_list[ticker_list.index(temp_ticker)] = 5
 
 
 for i in ticker_list:
@@ -132,6 +140,7 @@ for i in ticker_list:
 # sobr_daily = get_data("sobr", start_date="11/27/2022", end_date="12/09/2022", index_as_date=True, interval="1d")
 # pprint(vars(sobr_daily))
 display(sobr_daily2)
+print("Ending money: " + str(money))
 
 # sobr_daily.plot()
 
